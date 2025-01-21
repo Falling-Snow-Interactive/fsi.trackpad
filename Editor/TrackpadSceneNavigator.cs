@@ -26,7 +26,7 @@ namespace Fsi.Trackpad
         
         private void OnEnable()
         {
-            defaultIcon = AssetDatabase.LoadAssetAtPath<Texture>("Packages/com.fallingsnowinteractive.trackpad/Editor/Art/Trackpad_EditorTool_Icon.png");
+            defaultIcon = AssetDatabase.LoadAssetAtPath<Texture>("Packages/com.fallingsnowinteractive.trackpad/Editor/Art/Trackpad_XZ_EditorTool_Icon.png");
             icon = new GUIContent("Trackpad", defaultIcon, "FSI Trackpad");
         }
 
@@ -38,6 +38,9 @@ namespace Fsi.Trackpad
             lastMousePosition = currentEvent.mousePosition;
 
             Vector2 delta = currentEvent.delta;
+            
+            // TODO - Use this
+            // Debug.Log(currentEvent.modifiers);
 
             Vector3 pivot = SceneView.lastActiveSceneView.pivot;
             

@@ -14,9 +14,21 @@ namespace Fsi.Trackpad
         private float lastCameraSize = 1;
         private Vector2 lastMousePosition;
 
-        private float height = 0;
+        private float height;
 
         private TrackpadSceneNavigatorSettings settings;
+
+        [SerializeField]
+        private GUIContent icon;
+        public override GUIContent toolbarIcon => icon;
+        
+        private Texture defaultIcon;
+        
+        private void OnEnable()
+        {
+            defaultIcon = AssetDatabase.LoadAssetAtPath<Texture>("Packages/com.fallingsnowinteractive.trackpad/Editor/Art/Trackpad_EditorTool_Icon.png");
+            icon = new GUIContent("Trackpad", defaultIcon, "FSI Trackpad");
+        }
 
         public override void OnToolGUI(EditorWindow window)
         {
@@ -28,14 +40,14 @@ namespace Fsi.Trackpad
             Vector2 delta = currentEvent.delta;
 
             Vector3 pivot = SceneView.lastActiveSceneView.pivot;
-        
+            
             bool up = currentEvent.shift;
             bool rotate = currentEvent.command;
             bool reset = currentEvent.alt;
             bool zoom = currentEvent.control;
             
             // Reset height check first
-            if (reset)
+            if (Keyboard.current.altKey.isPressed)
             {
                 height = 0;
                 pivot.y = height;

@@ -47,7 +47,7 @@ namespace Fsi.Trackpad
             bool zoom = currentEvent.control;
             
             // Reset height check first
-            if (Keyboard.current.altKey.isPressed)
+            if (reset)
             {
                 height = 0;
                 pivot.y = height;

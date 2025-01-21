@@ -1,0 +1,17 @@
+{
+  "name": "com.fallingsnowinteractive.trackpad",
+  "version": "0.1.0",
+  "displayName": "FSI Trackpad",
+  "description": "Improved Macbook Pro trackpad support.",
+  "unity": "2019.1",
+  "unityRelease": "0b5",
+  "keywords": [
+    "Trackpad",
+    "Macbook"
+  ],
+  "author": {
+    "name": "Kira Dinan",
+    "email": "kiradinan.dev@gmail.com"
+  },
+  "hideInEditor": false
+}

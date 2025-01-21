@@ -1,5 +1,5 @@
 # Trackpad
- Trackpad for Scene View in Unity Editor
+ Easy Scene View navigation in the Unity Editor with a trackpad.
 
 ## Usage
 - Two finger scroll: Pan scene view pivot along X plane.

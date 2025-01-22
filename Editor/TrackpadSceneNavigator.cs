@@ -1,3 +1,4 @@
+using System;
 using Fsi.Trackpad.Settings;
 using UnityEditor;
 using UnityEditor.EditorTools;
@@ -23,6 +24,18 @@ namespace Fsi.Trackpad
         public override GUIContent toolbarIcon => icon;
         
         private Texture defaultIcon;
+
+        public enum NavigationMode
+        {
+            None = 0,
+            PanXZ = 1,
+            PanXY = 2,
+            Orbit = 3,
+            Zoom = 4
+        }
+        
+        private NavigationMode mode = NavigationMode.None;
+        public NavigationMode Mode => mode;
         
         private void OnEnable()
         {
@@ -33,42 +46,24 @@ namespace Fsi.Trackpad
         public override void OnToolGUI(EditorWindow window)
         {
             settings ??= TrackpadSceneNavigatorSettings.GetOrCreateSettings();
-            
             Event currentEvent = Event.current;
-            lastMousePosition = currentEvent.mousePosition;
 
-            Vector2 delta = currentEvent.delta;
-            
-            // TODO - Use this
-            // Debug.Log(currentEvent.modifiers);
-
-            Vector3 pivot = SceneView.lastActiveSceneView.pivot;
-            
-            bool up = currentEvent.shift;
-            bool rotate = currentEvent.command;
-            bool reset = currentEvent.alt;
-            bool zoom = currentEvent.control;
-            
-            // Reset height check first
-            if (reset)
+            if (IsSwipe(currentEvent))
             {
-                height = 0;
-                pivot.y = height;
-                SceneView.lastActiveSceneView.pivot = pivot;
+                CheckMode();
+                DrawHandles();
+                UpdateMode();
+                
+                SceneView.lastActiveSceneView.size = lastCameraSize;
+
+                Vector3 heightVector = SceneView.lastActiveSceneView.pivot;
+                heightVector.y = height;
+                SceneView.lastActiveSceneView.pivot = heightVector;
             }
-        
-            // Draw Handles
-            DrawHandles(pivot, rotate, up);
-        
-            // Handle Trackpad
-            bool isSwipe = IsSwipe(currentEvent);
-            HandleTrackpad(pivot, delta, isSwipe, zoom, rotate, up);
-        
-            if(!isSwipe)
+            else
             {
-                base.OnToolGUI(window);
-                lastCameraSize = SceneView.lastActiveSceneView.size;
                 lastMousePosition = currentEvent.mousePosition;
+                lastCameraSize = SceneView.lastActiveSceneView.size;
             }
         }
 
@@ -86,144 +81,167 @@ namespace Fsi.Trackpad
         
             return currentEvent.mousePosition == lastMousePosition;
         }
-    
-        #region Trackpad Controls
-
-        private void HandleTrackpad(Vector3 pivot, Vector2 delta, bool isSwipe, bool zoom, bool rotate, bool up)
-        {
-            if (delta.sqrMagnitude < SWIPE_TOLERANCE)
-            {
-                return;
-            }
         
-            if (isSwipe)
+        
+        private void CheckMode()
+        {
+            Event currentEvent = Event.current;
+            
+            NavigationMode nextMode = NavigationMode.None;
+            
+            EventModifiers modifiers = currentEvent.modifiers;
+            if (modifiers.HasFlag(EventModifiers.Alt))
             {
-                pivot.y = height;
+                height = 0;
+                Vector3 pivot = SceneView.lastActiveSceneView.pivot;
+                pivot.y = 0;
                 SceneView.lastActiveSceneView.pivot = pivot;
-            
-                if (zoom)
-                {
-                    Zoom(delta.y);
-                }
-                else if (rotate)
-                {
-                    Rotate(delta);
-                }
-                else if (up)
-                {
-                    PanUp(delta);
-                }
-                else
-                {
-                    PanForward(delta);
-                }
-            
-                SceneView.lastActiveSceneView.size = lastCameraSize;
+            }
+            else if (modifiers == EventModifiers.None)
+            {
+                nextMode = NavigationMode.PanXZ;
+            }
+            else if (modifiers.HasFlag(EventModifiers.Command))
+            {
+                nextMode = NavigationMode.Orbit;
+            }
+            else if (modifiers.HasFlag(EventModifiers.Shift))
+            {
+                nextMode = NavigationMode.PanXY;
+            }
+            else if (modifiers.HasFlag(EventModifiers.Control))
+            {
+                nextMode = NavigationMode.Zoom;
+            }
+
+            if (mode != nextMode)
+            {
+                Debug.Log($"{mode} -> {nextMode}");
+                mode = nextMode;
             }
         }
-
-        private void PanForward(Vector2 delta)
-        {
-            Vector3 forward = SceneView.lastActiveSceneView.camera.transform.forward;
-            forward.y = 0;
-            forward.Normalize();
-        
-            Vector3 right = SceneView.lastActiveSceneView.camera.transform.right;
-            right.y = 0;
-            right.Normalize();
-        
-            Vector3 horizontal = right;
-            Vector3 vertical = -forward;
-
-            Vector3 move = horizontal * delta.x * settings.PanSensitivity * settings.PanSensitivityAxis.x
-                           + vertical * delta.y * settings.PanSensitivity * settings.PanSensitivityAxis.y;
-            
-            SceneView.lastActiveSceneView.pivot += move;
-        }
-    
-        private void PanUp(Vector2 delta)
-        {
-            Vector3 right = SceneView.lastActiveSceneView.camera.transform.right;
-            right.y = 0;
-            right.Normalize();
-        
-            Transform sceneCameraTransform = SceneView.lastActiveSceneView.camera.transform;
-            Vector3 horizontal = sceneCameraTransform.right;
-            Vector3 vertical = Vector3.down;
-
-            Vector3 move = horizontal * delta.x * settings.PanSensitivity * settings.PanSensitivityAxis.x;
-            height += vertical.y * delta.y * settings.PanSensitivity * settings.PanSensitivityAxis.y;
-            SceneView.lastActiveSceneView.pivot += move; 
-        }
-
-        private void Rotate(Vector2 delta)
-        {
-            Vector3 newRotation = SceneView.lastActiveSceneView.rotation.eulerAngles;
-            newRotation.x += delta.y * settings.RotateSensitivity * settings.RotateSensitivityAxis.y;
-            newRotation.y += delta.x * settings.RotateSensitivity * settings.RotateSensitivityAxis.x;
-
-            SceneView.lastActiveSceneView.LookAtDirect(SceneView.lastActiveSceneView.pivot, 
-                                                       Quaternion.Euler(newRotation));
-            SceneView.lastActiveSceneView.Repaint();
-        }
-
-        private void Zoom(float delta)
-        {
-            lastCameraSize += delta * settings.ZoomSensitivity;
-        }
-    
-        #endregion
 
         #region Draw Handles
 
-        private void DrawHandles(Vector3 pivot, bool rotate, bool up)
+        private void DrawHandles()
         {
+            // do this based on the mode;
+            switch (mode)
+            {
+                case NavigationMode.None:
+                    break;
+                case NavigationMode.PanXZ:
+                    DrawPanXZHandles();
+                    break;
+                case NavigationMode.PanXY:
+                    DrawPanXYHandles();
+                    break;
+                case NavigationMode.Orbit:
+                    DrawOrbitHandles();
+                    break;
+                case NavigationMode.Zoom:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+            
+            if (settings.ShowPivot)
+            {
+                Handles.color = Color.white;
+                Handles.DrawSolidDisc(SceneView.lastActiveSceneView.pivot,
+                                      SceneView.lastActiveSceneView.camera.transform.forward,
+                                      0.1f);
+            }
+            
+            if (settings.ShowCoordinates)
+            {
+                DrawCoordinates(SceneView.lastActiveSceneView.pivot);
+            }
+        }
+
+        private void DrawPanXZHandles()
+        {
+            if (!settings.ShowPanPlanes)
+            {
+                return;
+            }
+
             Vector3 forward = SceneView.lastActiveSceneView.camera.transform.forward;
             forward.y = 0;
             forward.Normalize();
-        
+
             Vector3 right = SceneView.lastActiveSceneView.camera.transform.right;
             right.y = 0;
             right.Normalize();
+            
+            DrawPlane(SceneView.lastActiveSceneView.pivot, 
+                      forward,
+                      right,
+                      settings.XPlaneColor,
+                      settings.XPlaneOutlineColor);
+
+            Vector3 point = SceneView.lastActiveSceneView.pivot;// - forward * 1f - right * 1f;
+            float size = 0.6f;
+            
+            Handles.color = Color.blue;
+            Handles.ArrowHandleCap(0, 
+                                   point, 
+                                   Quaternion.LookRotation(forward), 
+                                   size,
+                                   EventType.Repaint);
+            
+            Handles.color = Color.red;
+            Handles.ArrowHandleCap(1, 
+                                   point, 
+                                   Quaternion.LookRotation(right), 
+                                   size,
+                                   EventType.Repaint);
+        }
         
-            Vector3 upDir = SceneView.lastActiveSceneView.camera.transform.up;
-            upDir.y = 0;
-            upDir.Normalize();
+        private void DrawPanXYHandles()
+        {
+            if (!settings.ShowPanPlanes)
+            {
+                return;
+            }
+            
+            Vector3 forward = SceneView.lastActiveSceneView.camera.transform.forward;
+            forward.y = 0;
+            forward.Normalize();
+            
+            Vector3 right = SceneView.lastActiveSceneView.camera.transform.right;
+            right.y = 0;
+            right.Normalize();
+            
+            DrawPlane(SceneView.lastActiveSceneView.pivot, 
+                      Vector3.up,
+                      right,
+                      settings.YPlaneColor,
+                      settings.YPlaneOutlineColor);
+            
+            Vector3 point = SceneView.lastActiveSceneView.pivot;// - forward * 1f - right * 1f;
+            float size = 0.6f;
+            
+            Handles.color = Color.red;
+            Handles.ArrowHandleCap(0, 
+                                   point, 
+                                   Quaternion.LookRotation(right), 
+                                   size,
+                                   EventType.Repaint);
+            
+            Handles.color = Color.green;
+            Handles.ArrowHandleCap(1, 
+                                   point, 
+                                   Quaternion.LookRotation(Vector3.up), 
+                                   size,
+                                   EventType.Repaint);
+        }
 
-            if (settings.ShowPivot)
+        private void DrawOrbitHandles()
+        {
+            if (settings.ShowRotateHandles)
             {
-                Handles.DrawSolidDisc(SceneView.lastActiveSceneView.pivot,
-                                      forward,
-                                      0.1f);
-            }
-
-            if (settings.ShowCoordinates)
-            {
-                DrawCoordinates(pivot);
-            }
-
-            if (rotate)
-            {
-                if (settings.ShowRotateHandles)
-                {
-                    Handles.RotationHandle(Quaternion.identity, SceneView.lastActiveSceneView.pivot);
-                }
-            }
-            else if (up && settings.ShowPanPlanes)
-            {
-                DrawPlane(SceneView.lastActiveSceneView.pivot, 
-                          Vector3.up,
-                          right,
-                          settings.YPlaneColor,
-                          settings.YPlaneOutlineColor);
-            }
-            else if(settings.ShowPanPlanes)
-            {
-                DrawPlane(SceneView.lastActiveSceneView.pivot, 
-                          forward,
-                          right,
-                          settings.XPlaneColor,
-                          settings.XPlaneOutlineColor);
+                Handles.RotationHandle(Quaternion.identity, SceneView.lastActiveSceneView.pivot);
             }
         }
 
@@ -261,9 +279,99 @@ namespace Fsi.Trackpad
                              };
 
             string coordinates = $"({center.x:0.0}, {center.y:0.0}, {center.z:0.0})";
-            Handles.Label(center + SceneView.lastActiveSceneView.camera.transform.up * rise, coordinates, style);
+            Handles.Label(center - SceneView.lastActiveSceneView.camera.transform.up * rise, coordinates, style);
         }
     
+        #endregion
+
+        #region Mode Control
+
+        private void UpdateMode()
+        {
+            Vector2 delta = Event.current.delta;
+            if (delta.sqrMagnitude < SWIPE_TOLERANCE)
+            {
+                return;
+            }
+            
+            switch (mode)
+            {
+                case NavigationMode.None:
+                    break;
+                case NavigationMode.PanXZ:
+                    UpdatePanXZ();
+                    break;
+                case NavigationMode.PanXY:
+                    UpdatePanXY();
+                    break;
+                case NavigationMode.Orbit:
+                    UpdateOrbit();
+                    break;
+                case NavigationMode.Zoom:
+                    UpdateZoom();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private void UpdatePanXZ()
+        {
+            Vector2 delta = Event.current.delta;
+            
+            Vector3 forward = SceneView.lastActiveSceneView.camera.transform.forward;
+            forward.y = 0;
+            forward.Normalize();
+        
+            Vector3 right = SceneView.lastActiveSceneView.camera.transform.right;
+            right.y = 0;
+            right.Normalize();
+        
+            Vector3 horizontal = right;
+            Vector3 vertical = -forward;
+
+            Vector3 move = horizontal * delta.x * settings.PanSensitivity * settings.PanSensitivityAxis.x
+                           + vertical * delta.y * settings.PanSensitivity * settings.PanSensitivityAxis.y;
+            
+            SceneView.lastActiveSceneView.pivot += move;
+        }
+
+        private void UpdatePanXY()
+        {
+            Vector2 delta = Event.current.delta;
+            
+            Vector3 right = SceneView.lastActiveSceneView.camera.transform.right;
+            right.y = 0;
+            right.Normalize();
+        
+            Transform sceneCameraTransform = SceneView.lastActiveSceneView.camera.transform;
+            Vector3 horizontal = sceneCameraTransform.right;
+            Vector3 vertical = Vector3.down;
+
+            Vector3 move = horizontal * delta.x * settings.PanSensitivity * settings.PanSensitivityAxis.x;
+            height += vertical.y * delta.y * settings.PanSensitivity * settings.PanSensitivityAxis.y;
+            SceneView.lastActiveSceneView.pivot += move; 
+        }
+
+        private void UpdateOrbit()
+        {
+            Vector2 delta = Event.current.delta;
+            
+            Vector3 newRotation = SceneView.lastActiveSceneView.rotation.eulerAngles;
+            newRotation.x += delta.y * settings.RotateSensitivity * settings.RotateSensitivityAxis.y;
+            newRotation.y += delta.x * settings.RotateSensitivity * settings.RotateSensitivityAxis.x;
+
+            SceneView.lastActiveSceneView.LookAtDirect(SceneView.lastActiveSceneView.pivot, 
+                                                       Quaternion.Euler(newRotation));
+            SceneView.lastActiveSceneView.Repaint();
+        }
+
+        private void UpdateZoom()
+        {
+            float delta = Event.current.delta.y;
+            lastCameraSize += delta * settings.ZoomSensitivity;
+        }
+        
         #endregion
     }
 }

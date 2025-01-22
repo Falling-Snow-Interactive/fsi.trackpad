@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 
 namespace Fsi.Trackpad
 {
-    [Overlay(typeof(SceneView), "Trackpad", true)]
+    // [Overlay(typeof(SceneView), "Trackpad", true)]
     public class TrackpadSceneNavigatorOverlay : Overlay
     {
         public override VisualElement CreatePanelContent()

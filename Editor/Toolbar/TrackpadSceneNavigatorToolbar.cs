@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Fsi.Trackpad.Toolbar
 {
-    [Overlay(typeof(SceneView), "Trackpad Scene Navigator Toolbar")]
+    // [Overlay(typeof(SceneView), "Trackpad Scene Navigator Toolbar")]
     public class TrackpadSceneNavigatorToolbar : ToolbarOverlay
     {
         public TrackpadSceneNavigatorToolbar() : base(CreateCube.id)

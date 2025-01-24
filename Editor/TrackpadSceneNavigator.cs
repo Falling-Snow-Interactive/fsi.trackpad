@@ -147,10 +147,11 @@ namespace Fsi.Trackpad
             
             if (settings.ShowPivot)
             {
+                float radius = HandleUtility.GetHandleSize(SceneView.lastActiveSceneView.pivot) * 0.05f;
                 Handles.color = Color.white;
                 Handles.DrawSolidDisc(SceneView.lastActiveSceneView.pivot,
                                       SceneView.lastActiveSceneView.camera.transform.forward,
-                                      0.1f);
+                                      radius);
             }
             
             if (settings.ShowCoordinates)
@@ -174,27 +175,32 @@ namespace Fsi.Trackpad
             right.y = 0;
             right.Normalize();
             
+            Vector3 point = SceneView.lastActiveSceneView.pivot;
+            float planeSize = settings.HandlesSize/2f;
+            float arrowSize = settings.HandlesSize;
+            float planeAdj = HandleUtility.GetHandleSize(point) * planeSize;
+            float arrowAdj = HandleUtility.GetHandleSize(point) * arrowSize;
+            
             DrawPlane(SceneView.lastActiveSceneView.pivot, 
                       forward,
                       right,
+                      planeAdj,
+                      0,
                       settings.XPlaneColor,
                       settings.XPlaneOutlineColor);
-
-            Vector3 point = SceneView.lastActiveSceneView.pivot;// - forward * 1f - right * 1f;
-            float size = 0.6f;
             
             Handles.color = Color.blue;
             Handles.ArrowHandleCap(0, 
                                    point, 
                                    Quaternion.LookRotation(forward), 
-                                   size,
+                                   arrowAdj,
                                    EventType.Repaint);
             
             Handles.color = Color.red;
             Handles.ArrowHandleCap(1, 
                                    point, 
                                    Quaternion.LookRotation(right), 
-                                   size,
+                                   arrowAdj,
                                    EventType.Repaint);
         }
         
@@ -213,27 +219,32 @@ namespace Fsi.Trackpad
             right.y = 0;
             right.Normalize();
             
+            Vector3 point = SceneView.lastActiveSceneView.pivot;
+            const float planeSize = 0.4f;
+            const float arrowSize = 0.8f;
+            float planeAdj = HandleUtility.GetHandleSize(point) * planeSize;
+            float arrowAdj = HandleUtility.GetHandleSize(point) * arrowSize;
+            
             DrawPlane(SceneView.lastActiveSceneView.pivot, 
                       Vector3.up,
                       right,
+                      planeAdj,
+                      0,
                       settings.YPlaneColor,
                       settings.YPlaneOutlineColor);
-            
-            Vector3 point = SceneView.lastActiveSceneView.pivot;// - forward * 1f - right * 1f;
-            float size = 0.6f;
             
             Handles.color = Color.red;
             Handles.ArrowHandleCap(0, 
                                    point, 
                                    Quaternion.LookRotation(right), 
-                                   size,
+                                   arrowAdj,
                                    EventType.Repaint);
             
             Handles.color = Color.green;
             Handles.ArrowHandleCap(1, 
                                    point, 
                                    Quaternion.LookRotation(Vector3.up), 
-                                   size,
+                                   arrowAdj,
                                    EventType.Repaint);
         }
 
@@ -242,15 +253,46 @@ namespace Fsi.Trackpad
             if (settings.ShowRotateHandles)
             {
                 Handles.RotationHandle(Quaternion.identity, SceneView.lastActiveSceneView.pivot);
+                
+                Vector3 forward = SceneView.lastActiveSceneView.camera.transform.forward;
+                forward.y = 0;
+                forward.Normalize();
+            
+                Vector3 right = SceneView.lastActiveSceneView.camera.transform.right;
+                right.y = 0;
+                right.Normalize();
+            
+                Vector3 point = SceneView.lastActiveSceneView.pivot;
+                const float planeSize = 0.4f;
+                float planeAdj = HandleUtility.GetHandleSize(point) * planeSize;
+                
+                DrawPlane(SceneView.lastActiveSceneView.pivot, 
+                          forward,
+                          right,
+                          planeAdj,
+                          0,
+                          settings.XPlaneColor,
+                          settings.XPlaneOutlineColor);
+            
+                DrawPlane(SceneView.lastActiveSceneView.pivot, 
+                          Vector3.up,
+                          right,
+                          planeAdj,
+                          0,
+                          settings.YPlaneColor,
+                          settings.YPlaneOutlineColor);
             }
         }
 
-        private void DrawPlane(Vector3 center, Vector3 forward, Vector3 right, Color faceColor, Color outlineColor)
+        private void DrawPlane(Vector3 center, Vector3 forward, Vector3 right, float size, float offset, Color faceColor, Color outlineColor)
         {
-            Vector3 p0 = center + forward - right;
-            Vector3 p1 = center + forward + right;
-            Vector3 p2 = center - forward - right;
-            Vector3 p3 = center - forward + right;
+            center += forward * offset;// / 2f;
+            center += right * offset;// / 2f;
+            
+            Vector3 p0 = center + forward * size - right * size;
+            Vector3 p1 = center + forward * size + right * size;
+            Vector3 p2 = center - forward * size - right * size;
+            Vector3 p3 = center - forward * size + right * size;
         
             Vector3[] verts = new Vector3[4];
             verts[0] = p0;

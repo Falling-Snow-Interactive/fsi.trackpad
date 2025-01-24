@@ -37,6 +37,7 @@ namespace Fsi.Trackpad.Settings
             EditorGUILayout.PropertyField(serializedSettings.FindProperty("rotateSensitivityAxis"));
             EditorGUILayout.PropertyField(serializedSettings.FindProperty("zoomSensitivity"));
             
+            EditorGUILayout.PropertyField(serializedSettings.FindProperty("handlesSize"));
             EditorGUILayout.PropertyField(serializedSettings.FindProperty("showPivot"));
             EditorGUILayout.PropertyField(serializedSettings.FindProperty("showPanPlanes"));
             EditorGUILayout.PropertyField(serializedSettings.FindProperty("showRotateHandles"));

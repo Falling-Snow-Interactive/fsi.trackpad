@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Fsi.Trackpad.Settings
 {
@@ -35,6 +36,10 @@ namespace Fsi.Trackpad.Settings
         public float ZoomSensitivity => zoomSensitivity;
 
         [Header("Handles")]
+
+        [SerializeField]
+        private float handlesSize = 1;
+        public float HandlesSize => handlesSize;
 
         [SerializeField]
         private bool showPivot = true;

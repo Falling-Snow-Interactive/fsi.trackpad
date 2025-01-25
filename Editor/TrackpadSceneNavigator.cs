@@ -15,7 +15,7 @@ namespace Fsi.Trackpad
         private float lastCameraSize = 1;
         private Vector2 lastMousePosition;
 
-        private float height;
+        // private float height;
 
         private TrackpadSceneNavigatorSettings settings;
 
@@ -31,7 +31,8 @@ namespace Fsi.Trackpad
             PanXZ = 1,
             PanXY = 2,
             Orbit = 3,
-            Zoom = 4
+            Zoom = 4,
+            Pan2D = 5,
         }
         
         private NavigationMode mode = NavigationMode.None;
@@ -56,9 +57,12 @@ namespace Fsi.Trackpad
                 
                 SceneView.lastActiveSceneView.size = lastCameraSize;
 
-                Vector3 heightVector = SceneView.lastActiveSceneView.pivot;
-                heightVector.y = height;
-                SceneView.lastActiveSceneView.pivot = heightVector;
+                // if (!SceneView.lastActiveSceneView.in2DMode)
+                // {
+                //     Vector3 heightVector = SceneView.lastActiveSceneView.pivot;
+                //     heightVector.y = height;
+                //     SceneView.lastActiveSceneView.pivot = heightVector;
+                // }
             }
             else
             {
@@ -90,34 +94,62 @@ namespace Fsi.Trackpad
             NavigationMode nextMode = NavigationMode.None;
             
             EventModifiers modifiers = currentEvent.modifiers;
-            if (modifiers.HasFlag(EventModifiers.Alt))
+            if (SceneView.lastActiveSceneView.in2DMode)
             {
-                height = 0;
-                Vector3 pivot = SceneView.lastActiveSceneView.pivot;
-                pivot.y = 0;
-                SceneView.lastActiveSceneView.pivot = pivot;
-            }
-            else if (modifiers == EventModifiers.None)
-            {
-                nextMode = NavigationMode.PanXZ;
-            }
-            else if (modifiers.HasFlag(EventModifiers.Command))
-            {
-                nextMode = NavigationMode.Orbit;
-            }
-            else if (modifiers.HasFlag(EventModifiers.Shift))
-            {
-                nextMode = NavigationMode.PanXY;
-            }
-            else if (modifiers.HasFlag(EventModifiers.Control))
-            {
-                nextMode = NavigationMode.Zoom;
-            }
+                if (modifiers == EventModifiers.None)
+                {
+                    nextMode = NavigationMode.Pan2D;
+                }
+                // else if (modifiers.HasFlag(EventModifiers.Command))
+                // {
+                //     nextMode = NavigationMode.Orbit;
+                // }
+                // else if (modifiers.HasFlag(EventModifiers.Shift))
+                // {
+                //     nextMode = NavigationMode.PanXY;
+                // }
+                else if (modifiers.HasFlag(EventModifiers.Control))
+                {
+                    nextMode = NavigationMode.Zoom;
+                }
 
-            if (mode != nextMode)
+                if (mode != nextMode)
+                {
+                    Debug.Log($"{mode} -> {nextMode}");
+                    mode = nextMode;
+                }
+            }
+            else
             {
-                Debug.Log($"{mode} -> {nextMode}");
-                mode = nextMode;
+                if (modifiers.HasFlag(EventModifiers.Alt))
+                {
+                    // height = 0;
+                    Vector3 pivot = SceneView.lastActiveSceneView.pivot;
+                    pivot.y = 0;
+                    SceneView.lastActiveSceneView.pivot = pivot;
+                }
+                else if (modifiers == EventModifiers.None)
+                {
+                    nextMode = NavigationMode.PanXZ;
+                }
+                else if (modifiers.HasFlag(EventModifiers.Command))
+                {
+                    nextMode = NavigationMode.Orbit;
+                }
+                else if (modifiers.HasFlag(EventModifiers.Shift))
+                {
+                    nextMode = NavigationMode.PanXY;
+                }
+                else if (modifiers.HasFlag(EventModifiers.Control))
+                {
+                    nextMode = NavigationMode.Zoom;
+                }
+
+                if (mode != nextMode)
+                {
+                    Debug.Log($"{mode} -> {nextMode}");
+                    mode = nextMode;
+                }
             }
         }
 
@@ -140,6 +172,9 @@ namespace Fsi.Trackpad
                     DrawOrbitHandles();
                     break;
                 case NavigationMode.Zoom:
+                    break;
+                case NavigationMode.Pan2D:
+                    DrawPanXYHandles();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -352,6 +387,9 @@ namespace Fsi.Trackpad
                 case NavigationMode.Zoom:
                     UpdateZoom();
                     break;
+                case NavigationMode.Pan2D:
+                    UpdatePan2D();
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -386,12 +424,24 @@ namespace Fsi.Trackpad
             right.y = 0;
             right.Normalize();
         
-            Transform sceneCameraTransform = SceneView.lastActiveSceneView.camera.transform;
-            Vector3 horizontal = sceneCameraTransform.right;
+            Vector3 horizontal = right;
             Vector3 vertical = Vector3.down;
 
-            Vector3 move = horizontal * delta.x * settings.PanSensitivity * settings.PanSensitivityAxis.x;
-            height += vertical.y * delta.y * settings.PanSensitivity * settings.PanSensitivityAxis.y;
+            Vector3 move = (horizontal * delta.x * settings.PanSensitivity * settings.PanSensitivityAxis.x) 
+                           + (vertical * delta.y * settings.PanSensitivity * settings.PanSensitivityAxis.y);
+            SceneView.lastActiveSceneView.pivot += move; 
+        }
+
+        private void UpdatePan2D()
+        {
+            Vector2 delta = Event.current.delta;
+        
+            Vector3 horizontal = Vector3.right;
+            Vector3 vertical = Vector3.down;
+
+            Vector3 move = horizontal * delta.x * settings.PanSensitivity * settings.PanSensitivityAxis.x
+                           + vertical * delta.y * settings.PanSensitivity * settings.PanSensitivityAxis.y;
+            
             SceneView.lastActiveSceneView.pivot += move; 
         }
 

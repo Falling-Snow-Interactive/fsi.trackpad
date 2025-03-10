@@ -1,10 +1,13 @@
 {
-    "name": "FsiTrackpad",
-    "rootNamespace": "Fsi.Trackpad",
+    "name": "fallingsnowinteractive.trackpad.Editor",
+    "rootNamespace": "",
     "references": [
-        "Unity.InputSystem"
+        "GUID:57f73895cf00147f3a5657daa021e475",
+        "GUID:75469ad4d38634e559750d17036d5f7c"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

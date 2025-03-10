@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.EditorTools;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using EventModifiers = UnityEngine.EventModifiers;
 
 namespace Fsi.Trackpad
 {
@@ -14,6 +15,7 @@ namespace Fsi.Trackpad
         
         private float lastCameraSize = 1;
         private Vector2 lastMousePosition;
+        private Vector3 lastPivotPosition;
 
         // private float height;
 
@@ -54,8 +56,23 @@ namespace Fsi.Trackpad
                 CheckMode();
                 DrawHandles();
                 UpdateMode();
-                
+
+                if (true)//currentEvent.isKey)
+                {
+                    if (currentEvent.keyCode == KeyCode.LeftBracket)
+                    {
+                        lastCameraSize -= 0.1f;
+                        lastCameraSize = Mathf.Max(lastCameraSize, 0.1f);
+                    }
+                    else if (currentEvent.keyCode == KeyCode.RightBracket)
+                    {
+                        lastCameraSize += 0.1f;
+                        lastCameraSize = Mathf.Max(lastCameraSize, 0.1f);
+                    }
+                }
+
                 SceneView.lastActiveSceneView.size = lastCameraSize;
+                SceneView.lastActiveSceneView.pivot = lastPivotPosition;
 
                 // if (!SceneView.lastActiveSceneView.in2DMode)
                 // {
@@ -68,6 +85,7 @@ namespace Fsi.Trackpad
             {
                 lastMousePosition = currentEvent.mousePosition;
                 lastCameraSize = SceneView.lastActiveSceneView.size;
+                lastPivotPosition = SceneView.lastActiveSceneView.pivot;
             }
         }
 
@@ -94,6 +112,7 @@ namespace Fsi.Trackpad
             NavigationMode nextMode = NavigationMode.None;
             
             EventModifiers modifiers = currentEvent.modifiers;
+            
             if (SceneView.lastActiveSceneView.in2DMode)
             {
                 if (modifiers == EventModifiers.None)
@@ -413,7 +432,8 @@ namespace Fsi.Trackpad
             Vector3 move = horizontal * delta.x * settings.PanSensitivity * settings.PanSensitivityAxis.x
                            + vertical * delta.y * settings.PanSensitivity * settings.PanSensitivityAxis.y;
             
-            SceneView.lastActiveSceneView.pivot += move;
+            lastPivotPosition += move;
+            // SceneView.lastActiveSceneView.pivot += move;
         }
 
         private void UpdatePanXY()
@@ -429,7 +449,9 @@ namespace Fsi.Trackpad
 
             Vector3 move = (horizontal * delta.x * settings.PanSensitivity * settings.PanSensitivityAxis.x) 
                            + (vertical * delta.y * settings.PanSensitivity * settings.PanSensitivityAxis.y);
-            SceneView.lastActiveSceneView.pivot += move; 
+            
+            lastPivotPosition += move;
+            // SceneView.lastActiveSceneView.pivot += move; 
         }
 
         private void UpdatePan2D()
@@ -442,7 +464,8 @@ namespace Fsi.Trackpad
             Vector3 move = horizontal * delta.x * settings.PanSensitivity * settings.PanSensitivityAxis.x
                            + vertical * delta.y * settings.PanSensitivity * settings.PanSensitivityAxis.y;
             
-            SceneView.lastActiveSceneView.pivot += move; 
+            lastPivotPosition += move * GetSizeScale();
+            // SceneView.lastActiveSceneView.pivot += move; 
         }
 
         private void UpdateOrbit()
@@ -461,7 +484,16 @@ namespace Fsi.Trackpad
         private void UpdateZoom()
         {
             float delta = Event.current.delta.y;
-            lastCameraSize += delta * settings.ZoomSensitivity;
+            lastCameraSize += delta * settings.ZoomSensitivity * GetSizeScale();
+
+            lastCameraSize = Mathf.Max(lastCameraSize, 0.1f);
+        }
+
+        private float GetSizeScale()
+        {
+            float size = lastCameraSize * 0.03f;
+            float floored = Mathf.Max(0.03f, size);
+            return floored;
         }
         
         #endregion
